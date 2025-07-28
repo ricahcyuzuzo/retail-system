@@ -1,0 +1,77 @@
+# Node.js dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Build outputs
+dist/
+build/
+dist-ssr/
+out/
+coverage/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.*.local
+*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs/
+*.log
+
+# TypeScript
+*.tsbuildinfo
+
+# Expo/React Native
+.expo/
+.expo-shared/
+*.expo
+
+# Electron
+electron-main.cjs
+electron-main.ts
+
+# Public/build artifacts
+public/
+web-build/
+android/
+ios/
+
+# Miscellaneous
+*.pid
+*.seed
+*.pid.lock
+
+# Optional: lock files (if you want to ignore them in certain cases)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Ignore test coverage
+coverage/
+.nyc_output/
+
+# Ignore macOS system files
+.AppleDouble
+.LSOverride
+
+# Ignore by pattern (add more as needed)
+*.bak
+*.tmp
