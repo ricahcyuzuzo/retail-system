@@ -6,25 +6,38 @@ let wss;
 const pendingRequests = new Map(); // key: requestId, value: ws
 
 function setupWebSocket(server) {
-  wss = new WebSocket.Server({ server });
+  // TEST BROADCAST: Sends a message to all clients every 10 seconds
+  setInterval(() => {
+    if (wss && wss.clients) {
+      wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+          client.send(JSON.stringify({ type: 'broadcast', msg: 'Hello from server (test broadcast)' }));
+        }
+      });
+    }
+  }, 10000); // 10 seconds
 
-  wss.on('connection', (ws) => {
+  wss = new WebSocket.Server({ server });
+  console.log('WebSocket server started');
+
+  wss.on('connection', (ws, req) => {
+    console.log('WebSocket client connected:', req && req.socket && req.socket.remoteAddress);
     ws.isAdmin = false;
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message);
         if (data.type === 'admin_auth') {
-          // Admin client authenticates
-          const { token } = data;
-          // Verify JWT and admin status
-          const jwt = require('jsonwebtoken');
-          let decoded;
-          try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-          } catch (e) {
-            ws.send(JSON.stringify({ error: 'Invalid admin token' }));
-            return;
-          }
+            // Admin client authenticates
+            const { token } = data;
+            // Verify JWT and admin status
+            const jwt = require('jsonwebtoken');
+            let decoded;
+            try {
+              decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+            } catch (e) {
+              ws.send(JSON.stringify({ error: 'Invalid admin token' }));
+              return;
+            }
           const user = await User.findOne({ email: decoded.email });
           if (user && user.isAdmin) {
             ws.isAdmin = true;

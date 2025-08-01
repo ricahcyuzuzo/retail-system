@@ -39,6 +39,12 @@ exports.login = async (req, res) => {
   }
 };
 
-exports.me = (req, res) => {
-  res.json({ email: req.user.email });
+exports.me = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.user.email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ email: user.email, isAdmin: user.isAdmin });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
 };
