@@ -8,6 +8,9 @@ import SalesScreen from './SalesScreen';
 import CreditSalesScreen from './CreditSalesScreen';
 import CreditPurchasesScreen from './CreditPurchasesScreen';
 import SuppliersScreen from './SuppliersScreen';
+import ReportsScreen from './ReportsScreen';
+import ExpensesScreen from './ExpensesScreen';
+import ProformaInvoicesScreen from './ProformaInvoicesScreen';
 
 const API_URL = 'http://localhost:4000/api';
 
@@ -115,6 +118,48 @@ function Navigation({ token }: { token: string }) {
             </svg>
             Suppliers
           </Link>
+
+          <Link
+            to="/reports"
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${
+              location.pathname === '/reports' 
+                ? 'bg-green-50 text-green-700 border-r-2 border-green-600' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 014-4h4m0 0V7m0 4v4" />
+            </svg>
+            Reports
+          </Link>
+
+          <Link
+            to="/expenses"
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${
+              location.pathname === '/expenses' 
+                ? 'bg-green-50 text-green-700 border-r-2 border-green-600' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+            </svg>
+            Expenses
+          </Link>
+
+          <Link
+            to="/proformas"
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${
+              location.pathname === '/proformas' 
+                ? 'bg-green-50 text-green-700 border-r-2 border-green-600' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Proforma Invoices
+          </Link>
         </nav>
         
         <div className="absolute bottom-0 w-64 p-6 border-t border-gray-200">
@@ -137,6 +182,9 @@ function Navigation({ token }: { token: string }) {
           <Route path="/credit-sales" element={<CreditSalesScreen apiUrl={API_URL} token={token} />} />
           <Route path="/credit-purchases" element={<CreditPurchasesScreen />} />
           <Route path="/suppliers" element={<SuppliersScreen />} />
+          <Route path="/reports" element={<ReportsScreen />} />
+          <Route path="/expenses" element={<ExpensesScreen />} />
+          <Route path="/proformas" element={<ProformaInvoicesScreen apiUrl={API_URL} token={token} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
