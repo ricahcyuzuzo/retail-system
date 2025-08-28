@@ -11,10 +11,11 @@ import SuppliersScreen from './SuppliersScreen';
 import ReportsScreen from './ReportsScreen';
 import ExpensesScreen from './ExpensesScreen';
 import ProformaInvoicesScreen from './ProformaInvoicesScreen';
+import SummaryScreen from './SummaryScreen';
 
 const API_URL = 'http://localhost:4000/api';
 
-function Navigation({ token }: { token: string }) {
+function Navigation({ token, onLogout }: { token: string; onLogout: () => void }) {
   const location = useLocation();
   
   return (
@@ -120,6 +121,20 @@ function Navigation({ token }: { token: string }) {
           </Link>
 
           <Link
+            to="/summary"
+            className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${
+              location.pathname === '/summary' 
+                ? 'bg-green-50 text-green-700 border-r-2 border-green-600' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 11V3a1 1 0 112 0v8h8a1 1 0 110 2h-8v8a1 1 0 11-2 0v-8H3a1 1 0 110-2h8z" />
+            </svg>
+            Summary
+          </Link>
+
+          <Link
             to="/reports"
             className={`flex items-center px-6 py-3 text-sm font-medium transition-colors ${
               location.pathname === '/reports' 
@@ -167,9 +182,15 @@ function Navigation({ token }: { token: string }) {
             <div className="w-8 h-8 bg-gray-300 rounded-full mr-3"></div>
             <div>
               <p className="text-sm font-medium text-gray-900">Admin User</p>
-              <p className="text-xs text-gray-500">Administrator</p>
+              <p className="text-xs text-gray-500">Logged in</p>
             </div>
           </div>
+          <button
+            onClick={onLogout}
+            className="mt-4 w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition-colors"
+          >
+            Logout
+          </button>
         </div>
       </div>
       
@@ -183,6 +204,7 @@ function Navigation({ token }: { token: string }) {
           <Route path="/credit-purchases" element={<CreditPurchasesScreen />} />
           <Route path="/suppliers" element={<SuppliersScreen />} />
           <Route path="/reports" element={<ReportsScreen />} />
+          <Route path="/summary" element={<SummaryScreen />} />
           <Route path="/expenses" element={<ExpensesScreen />} />
           <Route path="/proformas" element={<ProformaInvoicesScreen apiUrl={API_URL} token={token} />} />
           <Route path="*" element={<Navigate to="/" />} />
@@ -275,7 +297,7 @@ function App() {
   // Main app with navigation
   return (
     <Router>
-      <Navigation token={token} />
+      <Navigation token={token} onLogout={() => setToken(null)} />
     </Router>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Pagination from './components/Pagination';
 
 interface Supplier {
   _id: string;
@@ -21,6 +22,11 @@ const SuppliersScreen: React.FC = () => {
     address: '',
     contactPerson: ''
   });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const total = suppliers.length;
+  const startIndex = (page - 1) * pageSize;
+  const paginatedSuppliers = suppliers.slice(startIndex, startIndex + pageSize);
 
   const apiUrl = 'http://localhost:4000/api';
   const token = localStorage.getItem('token');
@@ -28,6 +34,11 @@ const SuppliersScreen: React.FC = () => {
   useEffect(() => {
     fetchSuppliers();
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(suppliers.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [suppliers, pageSize]);
 
   const fetchSuppliers = async () => {
     try {
@@ -102,7 +113,7 @@ const SuppliersScreen: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {suppliers.map((supplier) => (
+              {paginatedSuppliers.map((supplier) => (
                 <tr key={supplier._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{supplier.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{supplier.contactPerson || '-'}</td>
@@ -114,6 +125,16 @@ const SuppliersScreen: React.FC = () => {
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Add Supplier Modal */}

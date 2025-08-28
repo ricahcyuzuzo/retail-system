@@ -21,4 +21,10 @@ router.put('/:id/status', proformaController.updateProformaStatus);
 // Send proforma invoice
 router.put('/:id/send', proformaController.sendProforma);
 
-module.exports = router; 
+// Generate and download proforma PDF
+router.get('/:id/pdf', proformaController.generateProformaPdf);
+
+// Send proforma via email with PDF attachment
+router.post('/:id/email', proformaController.emailProforma);
+
+module.exports = router;

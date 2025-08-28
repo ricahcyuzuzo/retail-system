@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
+import Pagination from './components/Pagination';
 import CustomersScreen from './CustomersScreen';
 
 interface Product {
@@ -39,6 +41,8 @@ export default function CreditSalesScreen({ apiUrl, token }: CreditSalesScreenPr
   const [showPayModal, setShowPayModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'sales' | 'customers'>('sales');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [form, setForm] = useState({
     productId: '',
     quantity: 1,
@@ -91,6 +95,11 @@ export default function CreditSalesScreen({ apiUrl, token }: CreditSalesScreenPr
     fetchData();
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(creditSales.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [creditSales, pageSize]);
 
   const openModal = () => {
     setForm({
@@ -329,7 +338,9 @@ export default function CreditSalesScreen({ apiUrl, token }: CreditSalesScreenPr
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {creditSales.map((sale) => {
+                  {creditSales
+                    .slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize)
+                    .map((sale) => {
                     const isOverdue = new Date(sale.dueDate) < new Date();
                     const isPaid = sale.outstanding === 0;
                     return (
@@ -371,6 +382,16 @@ export default function CreditSalesScreen({ apiUrl, token }: CreditSalesScreenPr
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={creditSales.length}
+              page={page}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={(s) => {
+                setPageSize(s);
+                setPage(1);
+              }}
+            />
           </div>
         </>
       ) : (

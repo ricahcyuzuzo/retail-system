@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Pagination from './components/Pagination';
 
 interface Product {
   _id: string;
@@ -23,6 +24,12 @@ export default function ProductsScreen({ apiUrl, token }: ProductsScreenProps) {
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [form, setForm] = useState<Partial<Product>>({});
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const total = products.length;
+  const startIndex = (page - 1) * pageSize;
+  const paginatedProducts = products.slice(startIndex, startIndex + pageSize);
 
   const fetchProducts = async () => {
     setLoading(true);
@@ -43,6 +50,11 @@ export default function ProductsScreen({ apiUrl, token }: ProductsScreenProps) {
     fetchProducts();
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [products, pageSize]);
 
   const openAddModal = () => {
     setEditProduct(null);
@@ -137,7 +149,7 @@ export default function ProductsScreen({ apiUrl, token }: ProductsScreenProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {products.map((p) => (
+                {paginatedProducts.map((p) => (
                   <tr key={p._id} className="hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-6 font-medium text-gray-900">{p.name}</td>
                     <td className="py-4 px-6 text-gray-600">{p.barcode || '-'}</td>
@@ -164,6 +176,16 @@ export default function ProductsScreen({ apiUrl, token }: ProductsScreenProps) {
               </tbody>
             </table>
           </div>
+          <Pagination
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => {
+              setPageSize(s);
+              setPage(1);
+            }}
+          />
         </div>
       )}
       

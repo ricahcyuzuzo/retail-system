@@ -1,4 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState } from 'react';
+import Pagination from './components/Pagination';
 
 interface CreditSale {
   _id: string;
@@ -36,6 +39,14 @@ export default function CustomersScreen({ apiUrl, token }: CustomersScreenProps)
   const [error, setError] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerBalance | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [detailPage, setDetailPage] = useState(1);
+  const [detailPageSize, setDetailPageSize] = useState(10);
+
+  const totalCustomers = customers.length;
+  const startIndex = (page - 1) * pageSize;
+  const paginatedCustomers = customers.slice(startIndex, startIndex + pageSize);
 
   const fetchData = async () => {
     setLoading(true);
@@ -87,6 +98,11 @@ export default function CustomersScreen({ apiUrl, token }: CustomersScreenProps)
     fetchData();
     // eslint-disable-next-line
   }, []);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(customers.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [customers, pageSize]);
 
   const openCustomerDetails = (customer: CustomerBalance) => {
     setSelectedCustomer(customer);
@@ -195,7 +211,7 @@ export default function CustomersScreen({ apiUrl, token }: CustomersScreenProps)
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {customers.map((customer) => (
+              {paginatedCustomers.map((customer) => (
                 <tr key={customer.customerName} className="hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-6 font-medium text-gray-900">{customer.customerName}</td>
                   <td className="py-4 px-6 text-gray-600">{customer.customerPhone || '-'}</td>
@@ -230,6 +246,16 @@ export default function CustomersScreen({ apiUrl, token }: CustomersScreenProps)
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={totalCustomers}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Customer Details Modal */}
@@ -278,7 +304,9 @@ export default function CustomersScreen({ apiUrl, token }: CustomersScreenProps)
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {selectedCustomer.creditSales.map((sale) => {
+                    {selectedCustomer.creditSales
+                      .slice((detailPage - 1) * detailPageSize, (detailPage - 1) * detailPageSize + detailPageSize)
+                      .map((sale) => {
                       const isOverdue = new Date(sale.dueDate) < new Date();
                       const isPaid = sale.outstanding === 0;
                       return (
@@ -309,6 +337,16 @@ export default function CustomersScreen({ apiUrl, token }: CustomersScreenProps)
                   </tbody>
                 </table>
               </div>
+              <Pagination
+                total={selectedCustomer.creditSales.length}
+                page={detailPage}
+                pageSize={detailPageSize}
+                onPageChange={setDetailPage}
+                onPageSizeChange={(s) => {
+                  setDetailPageSize(s);
+                  setDetailPage(1);
+                }}
+              />
             </div>
           </div>
         </div>

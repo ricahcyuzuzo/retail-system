@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Switch, StyleSheet, Alert, TouchableOpacity } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const API_URL = 'http://localhost:4000/api';
+import { API_BASE_URL } from './api';
 
 export default function UserManagementScreen() {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +11,7 @@ export default function UserManagementScreen() {
   const fetchDesktopAccess = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/admin/desktop-access`);
+      const res = await fetch(`${API_BASE_URL}/admin/desktop-access`);
       const data = await res.json();
       setIsOpen(!!data.isOpen);
     } catch (err) {
@@ -26,7 +25,7 @@ export default function UserManagementScreen() {
     setUpdating(true);
     try {
       const token = await AsyncStorage.getItem('token');
-      const res = await fetch(`${API_URL}/admin/desktop-access`, {
+      const res = await fetch(`${API_BASE_URL}/admin/desktop-access`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

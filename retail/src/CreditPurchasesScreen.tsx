@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Pagination from './components/Pagination';
 
 interface Supplier {
   _id: string;
@@ -28,6 +29,10 @@ const CreditPurchasesScreen: React.FC = () => {
   const [creditPurchases, setCreditPurchases] = useState<CreditPurchase[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [loading, setLoading] = useState(true);
+  const [purchasesPage, setPurchasesPage] = useState(1);
+  const [purchasesPageSize, setPurchasesPageSize] = useState(10);
+  const [suppliersPage, setSuppliersPage] = useState(1);
+  const [suppliersPageSize, setSuppliersPageSize] = useState(10);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPurchase, setSelectedPurchase] = useState<CreditPurchase | null>(null);
@@ -40,6 +45,8 @@ const CreditPurchasesScreen: React.FC = () => {
     notes: ''
   });
   const [paymentAmount, setPaymentAmount] = useState(0);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
 
   const apiUrl = 'http://localhost:4000/api';
   const token = localStorage.getItem('token');
@@ -47,6 +54,17 @@ const CreditPurchasesScreen: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Keep pages in bounds
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(creditPurchases.length / purchasesPageSize));
+    if (purchasesPage > totalPages) setPurchasesPage(totalPages);
+  }, [creditPurchases, purchasesPageSize, purchasesPage]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(suppliers.length / suppliersPageSize));
+    if (suppliersPage > totalPages) setSuppliersPage(totalPages);
+  }, [suppliers, suppliersPageSize, suppliersPage]);
 
   const fetchData = async () => {
     try {
@@ -95,8 +113,18 @@ const CreditPurchasesScreen: React.FC = () => {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPurchase) return;
+    setPaymentError('');
+    if (
+      !Number.isFinite(paymentAmount) ||
+      paymentAmount <= 0 ||
+      paymentAmount > (selectedPurchase?.outstanding ?? 0)
+    ) {
+      setPaymentError('Enter an amount greater than 0 and not exceeding the outstanding balance.');
+      return;
+    }
 
     try {
+      setPaymentSaving(true);
       const response = await fetch(`${apiUrl}/credit-purchases/${selectedPurchase._id}/pay`, {
         method: 'PUT',
         headers: {
@@ -106,14 +134,29 @@ const CreditPurchasesScreen: React.FC = () => {
         body: JSON.stringify({ amount: paymentAmount })
       });
 
-      if (response.ok) {
-        setShowPaymentModal(false);
-        setSelectedPurchase(null);
-        setPaymentAmount(0);
-        fetchData();
+      if (!response.ok) {
+        // Try to extract error message
+        let message = 'Failed to record payment.';
+        try {
+          const data = await response.json();
+          if (data?.message) message = data.message;
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
+        }
+        setPaymentError(message);
+        return;
       }
+
+      setShowPaymentModal(false);
+      setSelectedPurchase(null);
+      setPaymentAmount(0);
+      fetchData();
     } catch (error) {
       console.error('Failed to record payment:', error);
+      setPaymentError('Network error while saving payment.');
+    } finally {
+      setPaymentSaving(false);
     }
   };
 
@@ -127,6 +170,10 @@ const CreditPurchasesScreen: React.FC = () => {
   const totalPurchases = creditPurchases.reduce((sum, p) => sum + p.totalAmount, 0);
   const totalPayments = creditPurchases.reduce((sum, p) => sum + p.payments.reduce((pSum, payment) => pSum + payment.amount, 0), 0);
   const overduePurchases = creditPurchases.filter(p => new Date(p.dueDate) < new Date() && p.outstanding > 0).length;
+  const purchasesStart = (purchasesPage - 1) * purchasesPageSize;
+  const paginatedPurchases = creditPurchases.slice(purchasesStart, purchasesStart + purchasesPageSize);
+  const suppliersStart = (suppliersPage - 1) * suppliersPageSize;
+  const paginatedSuppliers = suppliers.slice(suppliersStart, suppliersStart + suppliersPageSize);
 
   if (loading) {
     return (
@@ -204,6 +251,7 @@ const CreditPurchasesScreen: React.FC = () => {
 
         <div className="p-6">
           {activeTab === 'purchases' && (
+            <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -220,7 +268,7 @@ const CreditPurchasesScreen: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {creditPurchases.map((purchase) => {
+                  {paginatedPurchases.map((purchase) => {
                     const status = getStatus(purchase);
                     return (
                       <tr key={purchase._id} className="hover:bg-gray-50">
@@ -242,6 +290,7 @@ const CreditPurchasesScreen: React.FC = () => {
                               onClick={() => {
                                 setSelectedPurchase(purchase);
                                 setPaymentAmount(purchase.outstanding);
+                                setPaymentError('');
                                 setShowPaymentModal(true);
                               }}
                               className="text-blue-600 hover:text-blue-900"
@@ -256,9 +305,21 @@ const CreditPurchasesScreen: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={creditPurchases.length}
+              page={purchasesPage}
+              pageSize={purchasesPageSize}
+              onPageChange={setPurchasesPage}
+              onPageSizeChange={(s) => {
+                setPurchasesPageSize(s);
+                setPurchasesPage(1);
+              }}
+            />
+            </>
           )}
 
           {activeTab === 'suppliers' && (
+            <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -270,7 +331,7 @@ const CreditPurchasesScreen: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {suppliers.map((supplier) => (
+                  {paginatedSuppliers.map((supplier) => (
                     <tr key={supplier._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{supplier.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{supplier.contactPerson || '-'}</td>
@@ -281,6 +342,17 @@ const CreditPurchasesScreen: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={suppliers.length}
+              page={suppliersPage}
+              pageSize={suppliersPageSize}
+              onPageChange={setSuppliersPage}
+              onPageSizeChange={(s) => {
+                setSuppliersPageSize(s);
+                setSuppliersPage(1);
+              }}
+            />
+            </>
           )}
         </div>
       </div>
@@ -391,7 +463,7 @@ const CreditPurchasesScreen: React.FC = () => {
               <p className="text-sm text-gray-600">Product: {selectedPurchase.productName}</p>
               <p className="text-sm text-gray-600">Outstanding: {selectedPurchase.outstanding.toLocaleString()} RWF</p>
             </div>
-            <form onSubmit={handlePayment}>
+            <form >
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Payment Amount (RWF) *</label>
                 <input
@@ -401,16 +473,25 @@ const CreditPurchasesScreen: React.FC = () => {
                   max={selectedPurchase.outstanding}
                   step="100"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(parseInt(e.target.value))}
+                  onChange={(e) => {
+                    const v = parseInt(e.target.value, 10);
+                    setPaymentAmount(Number.isFinite(v) ? v : 0);
+                    if (paymentError) setPaymentError('');
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                {paymentError && (
+                  <p className="mt-2 text-sm text-red-600">{paymentError}</p>
+                )}
               </div>
               <div className="flex gap-3">
                 <button
                   type="submit"
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md"
+                  disabled={paymentSaving}
+                  onClick={handlePayment}
+                  className={`flex-1 py-2 px-4 rounded-md text-white ${paymentSaving ? 'bg-green-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
                 >
-                  Record Payment
+                  {paymentSaving ? 'Saving…' : 'Record Payment'}
                 </button>
                 <button
                   type="button"
@@ -418,6 +499,7 @@ const CreditPurchasesScreen: React.FC = () => {
                     setShowPaymentModal(false);
                     setSelectedPurchase(null);
                     setPaymentAmount(0);
+                    setPaymentError('');
                   }}
                   className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-md"
                 >
@@ -428,8 +510,9 @@ const CreditPurchasesScreen: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
 
-export default CreditPurchasesScreen; 
+export default CreditPurchasesScreen;

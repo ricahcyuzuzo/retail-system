@@ -14,6 +14,7 @@ const expensesRoutes = require('./routes/expenses');
 const expenseCategoriesRoutes = require('./routes/expense-categories');
 const proformasRoutes = require('./routes/proformas');
 const setupWebSocket = require('./websocket');
+const { scheduleDailySummary } = require('./jobs/dailySummary');
 
 const app = express();
 app.use(cors());
@@ -40,6 +41,12 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
       console.log(`Server running on port ${PORT}`);
     });
     setupWebSocket(server);
+    // Start background jobs
+    try {
+      scheduleDailySummary();
+    } catch (err) {
+      console.error('Failed to schedule daily summary job:', err);
+    }
   })
   .catch((err) => {
     console.error('MongoDB connection error:', err);

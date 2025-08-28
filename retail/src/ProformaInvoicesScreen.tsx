@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect } from 'react';
+import Pagination from './components/Pagination';
 
 interface Product {
   _id: string;
@@ -39,6 +41,8 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
   const [proformas, setProformas] = useState<ProformaInvoice[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedProforma, setSelectedProforma] = useState<ProformaInvoice | null>(null);
@@ -51,13 +55,18 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
     items: [{ productId: '', quantity: 1, unitPrice: 0 }],
     taxAmount: 0,
     discountAmount: 0,
-    currency: 'USD'
+    currency: 'RWF'
   });
 
   useEffect(() => {
     fetchProformas();
     fetchProducts();
   }, [filterStatus]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(proformas.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [proformas, pageSize]);
 
   const fetchProformas = async () => {
     try {
@@ -76,6 +85,39 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
       console.error('Error fetching proformas:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadProformaPdf = async (p: any) => {
+    try {
+      const response = await fetch(`${apiUrl}/proformas/${p._id}/pdf`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        alert(error || 'Error downloading PDF');
+        return;
+      }
+      const cd = response.headers.get('Content-Disposition') || '';
+      const match = /filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i.exec(cd);
+      const serverName = match ? decodeURIComponent(match[1] || match[2] || '') : '';
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const sanitize = (s: string) => (s || '').replace(/[^a-z0-9-_]+/gi, '_');
+      const dateStr = (p.createdAt ? new Date(p.createdAt) : new Date()).toISOString().slice(0, 10);
+      const num = sanitize(p.invoiceNumber || p._id || 'proforma');
+      const cust = sanitize(p.customerName || 'customer');
+      const fallback = `proforma-${num}-${cust}-${dateStr}.pdf`;
+      a.download = serverName || fallback;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Error downloading PDF');
     }
   };
 
@@ -114,7 +156,7 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
           items: [{ productId: '', quantity: 1, unitPrice: 0 }],
           taxAmount: 0,
           discountAmount: 0,
-          currency: 'USD'
+          currency: 'RWF'
         });
         fetchProformas();
       } else {
@@ -154,28 +196,27 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
     }
   };
 
-  const handleSendProforma = async (id: string) => {
+  const handleEmailProforma = async (id: string) => {
     try {
-      const response = await fetch(`${apiUrl}/proformas/${id}/send`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const response = await fetch(`${apiUrl}/proformas/${id}/email`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
       });
-
-      if (response.ok) {
-        fetchProformas();
-        if (selectedProforma && selectedProforma._id === id) {
-          const updatedProforma = await response.json();
-          setSelectedProforma(updatedProforma);
-        }
-      } else {
-        const error = await response.json();
-        alert(error.message || 'Error sending proforma');
+      if (!response.ok) {
+        const text = await response.text();
+        alert(text || 'Failed to email proforma');
+        return;
       }
+      fetchProformas();
+      if (selectedProforma && selectedProforma._id === id) {
+        // Update selected proforma by refetching details, optional
+        const detail = await fetch(`${apiUrl}/proformas/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+        if (detail.ok) setSelectedProforma(await detail.json());
+      }
+      alert('Email sent');
     } catch (error) {
-      console.error('Error sending proforma:', error);
-      alert('Error sending proforma');
+      console.error('Failed to email proforma:', error);
+      alert('Failed to email proforma');
     }
   };
 
@@ -287,7 +328,7 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {proformas.map((proforma) => (
+              {proformas.slice((page - 1) * pageSize, (page - 1) * pageSize + pageSize).map((proforma) => (
                 <tr key={proforma._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {proforma.invoiceNumber}
@@ -296,7 +337,7 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                     {proforma.customerName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${proforma.totalAmount.toFixed(2)}
+                    {proforma.totalAmount.toLocaleString()} RWF
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(proforma.status)}`}>
@@ -312,48 +353,26 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                         setSelectedProforma(proforma);
                         setShowDetailsModal(true);
                       }}
-                      className="text-green-600 hover:text-green-900 mr-3"
+                      className="text-green-600 hover:text-green-900"
                     >
                       View
                     </button>
-                    {proforma.status === 'draft' && (
-                      <button
-                        onClick={() => handleSendProforma(proforma._id)}
-                        className="text-blue-600 hover:text-blue-900 mr-2"
-                      >
-                        Send
-                      </button>
-                    )}
-                    {proforma.status === 'sent' && (
-                      <>
-                        <button
-                          onClick={() => handleUpdateStatus(proforma._id, 'accepted')}
-                          className="text-green-600 hover:text-green-900 mr-2"
-                        >
-                          Accept
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(proforma._id, 'rejected')}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    {proforma.status === 'accepted' && (
-                      <button
-                        onClick={() => handleUpdateStatus(proforma._id, 'paid')}
-                        className="text-purple-600 hover:text-purple-900"
-                      >
-                        Mark Paid
-                      </button>
-                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={proformas.length}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Create Modal */}
@@ -426,7 +445,7 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                             <option value="">Select Product</option>
                             {products.map(product => (
                               <option key={product._id} value={product._id}>
-                                {product.name} - ${product.retailPrice}
+                                {product.name} - {product.retailPrice.toLocaleString()} RWF
                               </option>
                             ))}
                           </select>
@@ -458,17 +477,6 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tax Amount</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.taxAmount}
-                      onChange={(e) => setFormData(prev => ({ ...prev, taxAmount: parseFloat(e.target.value) || 0 }))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Discount Amount</label>
                     <input
@@ -538,11 +546,19 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                 <div>
                   <h4 className="font-medium text-gray-900 mb-3">Invoice Details</h4>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Status:</span> 
-                      <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedProforma.status)}`}>
-                        {selectedProforma.status}
-                      </span>
-                    </p>
+                    <label className="block font-medium">Status</label>
+                    <select
+                      value={selectedProforma.status}
+                      onChange={(e) => handleUpdateStatus(selectedProforma._id, e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    >
+                      <option value="draft">draft</option>
+                      <option value="sent">sent</option>
+                      <option value="accepted">accepted</option>
+                      <option value="rejected">rejected</option>
+                      <option value="paid">paid</option>
+                      <option value="expired">expired</option>
+                    </select>
                     <p><span className="font-medium">Created:</span> {new Date(selectedProforma.createdAt).toLocaleDateString()}</p>
                   </div>
                 </div>
@@ -566,8 +582,8 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                         <tr key={index}>
                           <td className="px-4 py-2 text-sm text-gray-900">{item.productName}</td>
                           <td className="px-4 py-2 text-sm text-gray-900">{item.quantity}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">${item.unitPrice.toFixed(2)}</td>
-                          <td className="px-4 py-2 text-sm text-gray-900">${item.totalPrice.toFixed(2)}</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{item.unitPrice.toLocaleString()} RWF</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">{item.totalPrice.toLocaleString()} RWF</td>
                         </tr>
                       ))}
                     </tbody>
@@ -580,23 +596,23 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
                 <div className="w-64 space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${selectedProforma.subtotal.toFixed(2)}</span>
+                    <span>{selectedProforma.subtotal.toLocaleString()} RWF</span>
                   </div>
                   {selectedProforma.taxAmount > 0 && (
                     <div className="flex justify-between">
                       <span>Tax:</span>
-                      <span>${selectedProforma.taxAmount.toFixed(2)}</span>
+                      <span>{selectedProforma.taxAmount.toLocaleString()} RWF</span>
                     </div>
                   )}
                   {selectedProforma.discountAmount > 0 && (
                     <div className="flex justify-between">
                       <span>Discount:</span>
-                      <span>-${selectedProforma.discountAmount.toFixed(2)}</span>
+                      <span>-{selectedProforma.discountAmount.toLocaleString()} RWF</span>
                     </div>
                   )}
                   <div className="flex justify-between font-medium border-t pt-2">
                     <span>Total:</span>
-                    <span>${selectedProforma.totalAmount.toFixed(2)}</span>
+                    <span>{selectedProforma.totalAmount.toLocaleString()} RWF</span>
                   </div>
                 </div>
               </div>
@@ -605,39 +621,18 @@ export default function ProformaInvoicesScreen({ apiUrl, token }: ProformaInvoic
               <div className="mt-6 flex justify-end space-x-3">
                 {selectedProforma.status === 'draft' && (
                   <button
-                    onClick={() => handleSendProforma(selectedProforma._id)}
+                    onClick={() => handleEmailProforma(selectedProforma._id)}
                     className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    Send Proforma
+                    Send Email
                   </button>
                 )}
-                
-                {selectedProforma.status === 'sent' && (
-                  <div className="space-x-2">
-                    <button
-                      onClick={() => handleUpdateStatus(selectedProforma._id, 'accepted')}
-                      className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                      Mark Accepted
-                    </button>
-                    <button
-                      onClick={() => handleUpdateStatus(selectedProforma._id, 'rejected')}
-                      className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                      Mark Rejected
-                    </button>
-                  </div>
-                )}
-                
-                {selectedProforma.status === 'accepted' && (
-                  <button
-                    onClick={() => handleUpdateStatus(selectedProforma._id, 'paid')}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors"
-                  >
-                    Mark as Paid
-                  </button>
-                )}
-                
+                <button
+                  onClick={() => handleDownloadProformaPdf(selectedProforma)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Download PDF
+                </button>
                 <button
                   onClick={() => setShowDetailsModal(false)}
                   className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors"

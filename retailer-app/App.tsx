@@ -6,8 +6,18 @@ import { createDrawerNavigator } from '@react-navigation/drawer';
 import LoginScreen from './LoginScreen';
 import HomeScreen from './HomeScreen';
 import UserManagementScreen from './UserManagementScreen';
+import InventoryScreen from './InventoryScreen';
+import SalesScreen from './SalesScreen';
+import CreditSalesScreen from './CreditSalesScreen';
+import SuppliersScreen from './SuppliersScreen';
+import CreditPurchasesScreen from './CreditPurchasesScreen';
+import ReportsScreen from './ReportsScreen';
+import ExpensesScreen from './ExpensesScreen';
+import SummaryScreen from './SummaryScreen';
+import ProformasScreen from './ProformasScreen';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from './api';
 
 function AccessDenied({ onLogout }: { onLogout: () => void }) {
   return (
@@ -40,7 +50,7 @@ function App() {
       setLoading(true);
       setError(null);
       // Fetch user info
-      fetch('http://localhost:4000/api/auth/me', {
+      fetch(API_BASE_URL + '/auth/me', {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then(res => {
@@ -96,6 +106,15 @@ function App() {
     <NavigationContainer>
       <Drawer.Navigator initialRouteName="Home">
         <Drawer.Screen name="Home" component={HomeScreen} />
+        <Drawer.Screen name="Inventory" component={InventoryScreen} />
+        <Drawer.Screen name="Sales" component={SalesScreen} />
+        <Drawer.Screen name="Credit Sales" component={CreditSalesScreen} />
+        <Drawer.Screen name="Suppliers" component={SuppliersScreen} />
+        <Drawer.Screen name="Credit Purchases" component={CreditPurchasesScreen} />
+        <Drawer.Screen name="Summary" component={SummaryScreen} />
+        <Drawer.Screen name="Reports" component={ReportsScreen} />
+        <Drawer.Screen name="Expenses" component={ExpensesScreen} />
+        <Drawer.Screen name="Proformas" component={ProformasScreen} />
         {user.isAdmin && (
   <Drawer.Screen name="User Management" component={UserManagementScreen} />
 )}

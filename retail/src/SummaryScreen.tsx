@@ -27,7 +27,7 @@ const tabOptions = [
   { key: 'custom', label: 'Custom' }
 ];
 
-const ReportsScreen: React.FC = () => {
+const SummaryScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState('daily');
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,7 +45,9 @@ const ReportsScreen: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      let res;
+      let res:
+        | Response
+        | undefined;
       if (activeTab === 'custom') {
         if (!customRange.start || !customRange.end) {
           setLoading(false);
@@ -68,15 +70,14 @@ const ReportsScreen: React.FC = () => {
         const data = await res.json();
         setReport(data);
       } else {
-        setError('Failed to fetch report');
+        setError('Failed to fetch summary');
       }
     } catch (err) {
-      setError('Failed to fetch report');
+      setError('Failed to fetch summary');
     }
     setLoading(false);
   };
 
-  // Build combined, uniform rows for pagination
   const combinedRows = report
     ? [
         ...report.sales.map((s) => ({
@@ -106,7 +107,7 @@ const ReportsScreen: React.FC = () => {
   useEffect(() => {
     const totalPages = Math.max(1, Math.ceil(total / pageSize));
     if (page > totalPages) setPage(totalPages);
-  }, [total, pageSize]);
+  }, [total, pageSize, page]);
 
   const handleCustomRange = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,7 +125,7 @@ const ReportsScreen: React.FC = () => {
       };
       if (activeTab === 'custom') {
         if (!customRange.start || !customRange.end) {
-          setError('Select start and end date for custom report');
+          setError('Select start and end date for custom summary');
           return;
         }
         url = `${apiUrl}/reports/custom/pdf`;
@@ -152,7 +153,7 @@ const ReportsScreen: React.FC = () => {
       const a = document.createElement('a');
       a.href = href;
       const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      const fallback = `report-${activeTab}-${ts}.pdf`;
+      const fallback = `summary-${activeTab}-${ts}.pdf`;
       a.download = serverName || fallback;
       document.body.appendChild(a);
       a.click();
@@ -167,7 +168,7 @@ const ReportsScreen: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Reports</h1>
+        <h1 className="text-2xl font-bold text-gray-800">Summary</h1>
         <button
           onClick={handleDownloadPdf}
           disabled={loading || (activeTab === 'custom' && (!customRange.start || !customRange.end))}
@@ -224,7 +225,7 @@ const ReportsScreen: React.FC = () => {
               type="submit"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
             >
-              Get Report
+              Get Summary
             </button>
           </form>
         )}
@@ -314,4 +315,4 @@ const ReportsScreen: React.FC = () => {
   );
 };
 
-export default ReportsScreen; 
+export default SummaryScreen;

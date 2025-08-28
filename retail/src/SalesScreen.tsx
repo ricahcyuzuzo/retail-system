@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Pagination from './components/Pagination';
 
 interface Product {
   _id: string;
@@ -34,6 +35,8 @@ export default function SalesScreen({ apiUrl, token }: SalesScreenProps) {
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [form, setForm] = useState({
     productId: '',
     quantity: 1,
@@ -140,6 +143,14 @@ export default function SalesScreen({ apiUrl, token }: SalesScreenProps) {
   const selectedProduct = products.find(p => p._id === form.productId);
   const totalSales = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
   const totalProfit = sales.reduce((sum, sale) => sum + sale.profit, 0);
+  const total = sales.length;
+  const startIndex = (page - 1) * pageSize;
+  const paginatedSales = sales.slice(startIndex, startIndex + pageSize);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(sales.length / pageSize));
+    if (page > totalPages) setPage(totalPages);
+  }, [sales, pageSize]);
 
   if (loading) {
     return (
@@ -226,7 +237,7 @@ export default function SalesScreen({ apiUrl, token }: SalesScreenProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {sales.map((sale) => (
+              {paginatedSales.map((sale) => (
                 <tr key={sale._id} className="hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-6 text-gray-600">
                     {new Date(sale.createdAt).toLocaleDateString()}
@@ -251,6 +262,16 @@ export default function SalesScreen({ apiUrl, token }: SalesScreenProps) {
             </tbody>
           </table>
         </div>
+        <Pagination
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={(s) => {
+            setPageSize(s);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* Record Sale Modal */}

@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
+import Pagination from './components/Pagination';
 
 interface ExpenseCategory {
   _id: string;
@@ -21,6 +23,10 @@ const ExpensesScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expensesPage, setExpensesPage] = useState(1);
+  const [expensesPageSize, setExpensesPageSize] = useState(10);
+  const [categoriesPage, setCategoriesPage] = useState(1);
+  const [categoriesPageSize, setCategoriesPageSize] = useState(10);
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [showEditExpenseModal, setShowEditExpenseModal] = useState(false);
@@ -45,6 +51,17 @@ const ExpensesScreen: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Keep pages in bounds when data length or pageSize changes
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(expenses.length / expensesPageSize));
+    if (expensesPage > totalPages) setExpensesPage(totalPages);
+  }, [expenses, expensesPageSize, expensesPage]);
+
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(categories.length / categoriesPageSize));
+    if (categoriesPage > totalPages) setCategoriesPage(totalPages);
+  }, [categories, categoriesPageSize, categoriesPage]);
 
   const fetchData = async () => {
     try {
@@ -232,6 +249,10 @@ const ExpensesScreen: React.FC = () => {
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
   const businessExpenses = expenses.filter(e => e.type === 'business').reduce((sum, e) => sum + e.amount, 0);
   const personalExpenses = expenses.filter(e => e.type === 'personal').reduce((sum, e) => sum + e.amount, 0);
+  const expensesStart = (expensesPage - 1) * expensesPageSize;
+  const paginatedExpenses = expenses.slice(expensesStart, expensesStart + expensesPageSize);
+  const categoriesStart = (categoriesPage - 1) * categoriesPageSize;
+  const paginatedCategories = categories.slice(categoriesStart, categoriesStart + categoriesPageSize);
 
   if (loading) {
     return (
@@ -316,6 +337,7 @@ const ExpensesScreen: React.FC = () => {
 
         <div className="p-6">
           {activeTab === 'expenses' && (
+            <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -329,7 +351,7 @@ const ExpensesScreen: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {expenses.map((expense) => (
+                  {paginatedExpenses.map((expense) => (
                     <tr key={expense._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.description}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.category.name}</td>
@@ -351,21 +373,33 @@ const ExpensesScreen: React.FC = () => {
                         >
                           Edit
                         </button>
-                        <button
+                        {/* <button
                           onClick={() => handleDeleteExpense(expense._id)}
                           className="text-red-600 hover:text-red-900"
                         >
                           Delete
-                        </button>
+                        </button> */}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={expenses.length}
+              page={expensesPage}
+              pageSize={expensesPageSize}
+              onPageChange={setExpensesPage}
+              onPageSizeChange={(s) => {
+                setExpensesPageSize(s);
+                setExpensesPage(1);
+              }}
+            />
+            </>
           )}
 
           {activeTab === 'categories' && (
+            <>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -376,7 +410,7 @@ const ExpensesScreen: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {categories.map((category) => (
+                  {paginatedCategories.map((category) => (
                     <tr key={category._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{category.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{category.description || '-'}</td>
@@ -399,6 +433,17 @@ const ExpensesScreen: React.FC = () => {
                 </tbody>
               </table>
             </div>
+            <Pagination
+              total={categories.length}
+              page={categoriesPage}
+              pageSize={categoriesPageSize}
+              onPageChange={setCategoriesPage}
+              onPageSizeChange={(s) => {
+                setCategoriesPageSize(s);
+                setCategoriesPage(1);
+              }}
+            />
+            </>
           )}
         </div>
       </div>
