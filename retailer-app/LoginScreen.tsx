@@ -3,7 +3,9 @@ import { login } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
 
-const LoginScreen: React.FC = () => {
+type Props = { onLoginSuccess?: (token: string) => void };
+
+const LoginScreen: React.FC<Props> = ({ onLoginSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,7 +16,8 @@ const LoginScreen: React.FC = () => {
       // Use the separated API function
       const data = await login(email, password);
       if (data.token) {
-        AsyncStorage.setItem('token', data.token);
+        await AsyncStorage.setItem('token', data.token);
+        if (onLoginSuccess) onLoginSuccess(data.token);
       } else {
         Alert.alert('Login Failed', 'Invalid credentials');
       }

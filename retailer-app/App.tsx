@@ -77,8 +77,17 @@ function App() {
     }
   }, [token]);
 
+  const handleLoginSuccess = async (t: string) => {
+    setToken(t);
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('token');
+    setToken(null);
+  };
+
   if (!token) {
-    return <LoginScreen />;
+    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
   }
   if (loading) {
     return (
@@ -94,7 +103,7 @@ function App() {
         <StatusBar style="auto" />
         <Text style={{ color: 'red', marginTop: 40, fontSize: 18 }}>{error}</Text>
         <Button title="Retry" onPress={() => setToken(token)} />
-        <Button title="Logout" onPress={() => setToken(null)} />
+        <Button title="Logout" onPress={handleLogout} />
       </>
     );
   }
@@ -119,7 +128,7 @@ function App() {
   <Drawer.Screen name="User Management" component={UserManagementScreen} />
 )}
         <Drawer.Screen name="Logout">
-          {() => <Button title="Logout" onPress={() => setToken(null)} />}
+          {() => <Button title="Logout" onPress={handleLogout} />}
         </Drawer.Screen>
       </Drawer.Navigator>
       <StatusBar style="auto" />
